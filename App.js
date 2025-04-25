@@ -2,6 +2,8 @@ import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View, Button, ScrollView, Dimensions } from 'react-native';
 import React, { useEffect, useState } from "react"
 import * as Location from 'expo-location';
+// import { GOOGLE_MAP_API } from "@env";
+import Constants from 'expo-constants';
 
 const { width: SCREEN_WIDTH, height } = Dimensions.get("window");
 
@@ -13,6 +15,8 @@ const App = () => {
 
   const [city, setCity] = useState(null);
 
+  const googleMapApiKey = Constants.expoConfig.extra.googleMapApiKey;  
+
   const locationData = async () => {
     let { status } = await Location.requestForegroundPermissionsAsync();
   
@@ -22,15 +26,20 @@ const App = () => {
       return;
     }
 
-    let {coords: {latitude, longitude }} = await Location.getCurrentPositionAsync({ accuracy: 5 });
-    const address = await Location.reverseGeocodeAsync({
-      latitude, longitude
-    }, {useGoogleMaps: false})
-
-    console.log(address);
-    console.log(address[0].city);
-    setCity(address[0].city);
+    try {
+      let { coords: { latitude, longitude } } = await Location.getCurrentPositionAsync({ accuracy: 5 });
       
+      const apiUrl = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${googleMapApiKey}`
+  
+      const response = await fetch(apiUrl);
+      const data = await response.json();
+      console.log(data.results[7].formatted_address);
+      const cityAddress = data.results[7].address_components[0].short_name;
+      setCity(cityAddress);
+    } catch (error) {
+      setErrorMsg('Error fetching location: ' + error.message);
+      console.error(error);
+    }
   }
 
   useEffect(() => {
